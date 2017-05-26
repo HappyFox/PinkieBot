@@ -1,0 +1,1 @@
+KERNEL=="gpio*", SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/usr/local/bin/set-gpio-permissions.sh"
