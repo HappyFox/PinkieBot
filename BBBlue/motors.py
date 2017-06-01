@@ -17,12 +17,12 @@ class Speed(Enum):
     FREEWHEEL = 2
 
 
-def enable_motors():
+def enable():
     enable_pin = gpio.Pin(MOTOR_STBY)
     enable_pin.high = True
 
 
-def disable_motors():
+def disable():
     enable_pin = gpio.Pin(MOTOR_STBY)
     enable_pin.low = True
 
@@ -50,17 +50,26 @@ class Motor:
         self.dir_a.low = True
         self.dir_b.low = True
         self.pwm.duty = 0
+        self.invert = False
 
     @property
     def speed(self):
+        if self.dir_a.high == self.dir_b.high:
+            if self.dir_a.low:
+                return Speed.FREEWHEEL
+            else:
+                return Speed.BRAKE
+
         if self.dir_a.high and self.dir_b.low:
-            return self.pwm.duty
+            ret_val = self.pwm.duty
         elif self.dir_a.low and self.dir_b.high:
-            return -self.pwm.duty
-        elif self.dir_a.low and self.dir_b.low:
-            return Speed.FREEWHEEL
-        else:
-            return Speed.BRAKE
+            ret_val =  -self.pwm.duty
+
+        if self.invert:
+            ret_val = ret_val * -1
+
+        return ret_val
+
 
     @speed.setter
     def speed(self, value):
@@ -74,6 +83,9 @@ class Motor:
             self.pwm.duty = 0
             return
 
+        if self.invert:
+            value = value * -1
+
         if value >= 0:
             self.dir_a.high = True
             self.dir_b.low = True
@@ -82,8 +94,3 @@ class Motor:
             self.dir_b.high = True
 
         self.pwm.duty = abs(value)
-
-
-
-
-
