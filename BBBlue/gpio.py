@@ -24,7 +24,7 @@ class Direction(Enum):
     OUT = 2
 
 
-class Pin(object):
+class Pin:
 
     _OUT_STR = "out\n"
     _IN_STR = "in\n"
