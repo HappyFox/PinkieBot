@@ -1,0 +1,2 @@
+class BBBlueError(Exception):
+    pass
