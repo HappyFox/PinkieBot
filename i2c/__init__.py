@@ -47,26 +47,36 @@ class I2cDevice(object):
             raise Exception() #TODO: add more exceptions.
 
     def __getitem__(self, key):
-        if isinstance(key, Enum):
-            key = key.value
+        ret_val = self.read(key, 1)
+        return struct.unpack("B", ret_val)[0]
 
-        addr = struct.pack('B', key)
+    def __setitem__(self, key, value):
+        self.write(key, value)
+
+    def read(self, addr, _len):
+        if isinstance(addr, Enum):
+            addr = addr.value
+
+        addr = struct.pack('B', addr)
         if posix.write(self.fd, addr) != 1:
             raise Exception()
 
-        ret_val = struct.unpack('B', posix.read(self.fd, 1))[0]
+        return posix.read(self.fd, _len)
 
-        return ret_val
-
-    def __setitem__(self, key, value):
-        if isinstance(key, Enum):
-            key = key.value
+    def write(self, addr, value):
+        if isinstance(addr, Enum):
+            addr = addr.value
         if isinstance(value, Enum):
             value = value.value
 
-        msg = struct.pack('BB', key, value)
+        msg = struct.pack('B', addr)
 
-        if posix.write(self.fd, msg) != 2:
+        if isinstance(value, bytes):
+            msg += value
+        else:
+            msg += struct.pack("B" * len(value), * value)
+
+        if posix.write(self.fd, msg) != len(msg):
             raise Exception()
 
     def __del__(self):
@@ -74,3 +84,4 @@ class I2cDevice(object):
             posix.close(self.fd)
         except AttributeError:
             pass #Do nothing in this case.
+
