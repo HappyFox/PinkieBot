@@ -2,6 +2,7 @@ import fcntl
 import posix
 import struct
 
+from enum import Enum
 from fcntl import ioctl
 
 # from i2c-dev.h
@@ -13,6 +14,8 @@ class NotSupportedError(Exception):
 class I2cBus(dict):
 
     def __init__(self, bus):
+        if isinstance(bus, Enum):
+            bus = bus.value
         self.bus = bus
         self.file_path = "/dev/i2c-%d" % self.bus
 
@@ -21,6 +24,9 @@ class I2cBus(dict):
         dict.__init__(self)
 
     def __getitem__(self, key):
+        if isinstance(key, Enum):
+            key = key.value
+
         if key in self:
             return dict.__getitem__(self, key)
         else:
@@ -41,6 +47,9 @@ class I2cDevice(object):
             raise Exception() #TODO: add more exceptions.
 
     def __getitem__(self, key):
+        if isinstance(key, Enum):
+            key = key.value
+
         addr = struct.pack('B', key)
         if posix.write(self.fd, addr) != 1:
             raise Exception()
@@ -50,6 +59,11 @@ class I2cDevice(object):
         return ret_val
 
     def __setitem__(self, key, value):
+        if isinstance(key, Enum):
+            key = key.value
+        if isinstance(value, Enum):
+            value = value.value
+
         msg = struct.pack('BB', key, value)
 
         if posix.write(self.fd, msg) != 2:
