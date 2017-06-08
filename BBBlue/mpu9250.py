@@ -1,3 +1,5 @@
+import struct
+
 import i2c
 
 from enum import Enum
@@ -68,6 +70,8 @@ class GyroDef(Enum):
     FCHOICE_B_DLPF_EN = 0x00
     FCHOICE_B_DLPF_DISABLE = 0x01
 
+    XOUT_START = 0x43
+
 
 
 class Accelerometer:
@@ -84,7 +88,7 @@ class Accelerometer:
         self._to_ms = AccelDef.FS_TO_MS.value[self.scale.value]
         self.i2c[AccelDef.CONFIG_ADDR] = self.scale
 
-        dlpf = AccelDef.FCHOICE_1KHZ.value | AccelDef.BIT_FIFO_SIZE_1024
+        dlpf = AccelDef.FCHOICE_1KHZ.value | AccelDef.BIT_FIFO_SIZE_1024.value
         dlpf |= self.dlpf.value
         self.i2c[AccelDef.CONFIG_2_ADDR] = dlpf
 
@@ -100,13 +104,21 @@ class Gyro:
         self.dlpf = GyroDef.DLPF_92
 
     def initialize(self):
-        self._to_deg = GyroDef.FS_TO_DEG.value[self.scale]
+        self._to_deg = GyroDef.FS_TO_DEG.value[self.scale.value]
         gyro_config = GyroDef.FCHOICE_B_DLPF_EN.value | self.scale.value
-        self.i2c[ImuDef.CONFIG_ADDR] = gyro_config
+        self.i2c[GyroDef.CONFIG_ADDR] = gyro_config
 
-        dlpf = ImuDef.FIFO_MODE_REPLACE_OLD
+        dlpf = ImuDef.FIFO_MODE_REPLACE_OLD.value
         dlpf |= self.dlpf.value
         self.i2c[ImuDef.CONFIG_ADDR] = dlpf
+
+    def read_deg(self):
+        xout = self.i2c.read(GyroDef.XOUT_START, 6)
+        dat = struct.unpack(">hhh", xout)
+        print(dat)
+        dat = [x * self._to_deg for x in dat]
+        return dat
+
 
 
 class SampleErrorRate(Exception):

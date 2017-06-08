@@ -48,10 +48,13 @@ class I2cDevice(object):
 
     def __getitem__(self, key):
         ret_val = self.read(key, 1)
-        return struct.unpack("B", ret_val)[0]
+        return struct.unpack("B", ret_val)
 
     def __setitem__(self, key, value):
-        self.write(key, value)
+        if isinstance(value, Enum):
+            value = value.value
+        buf = struct.pack("B", value)
+        self.write(key, buf)
 
     def read(self, addr, _len):
         if isinstance(addr, Enum):
