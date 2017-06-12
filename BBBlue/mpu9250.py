@@ -8,6 +8,10 @@ IMU_ADDR = 0x68
 IMU_BUS = 2
 
 
+class NotInitializedError(Exception):
+    pass
+
+
 class AccelDef(Enum):
     """ From Register map, p14"""
 
@@ -40,6 +44,8 @@ class AccelDef(Enum):
     BIT_FIFO_SIZE_2048 = 0x80
     BIT_FIFO_SIZE_4096 = 0xC0
 
+    OUT_START = 0x3B
+
 
 
 class GyroDef(Enum):
@@ -70,7 +76,7 @@ class GyroDef(Enum):
     FCHOICE_B_DLPF_EN = 0x00
     FCHOICE_B_DLPF_DISABLE = 0x01
 
-    XOUT_START = 0x43
+    OUT_START = 0x43
 
 
 
@@ -84,6 +90,8 @@ class Accelerometer:
 
         self.dlpf = AccelDef.DLPF_92
 
+        self.initialized = False
+
     def initialize(self):
         self._to_ms = AccelDef.FS_TO_MS.value[self.scale.value]
         self.i2c[AccelDef.CONFIG_ADDR] = self.scale
@@ -92,6 +100,16 @@ class Accelerometer:
         dlpf |= self.dlpf.value
         self.i2c[AccelDef.CONFIG_2_ADDR] = dlpf
 
+        self.initialized = True
+
+    def read_ms(self):
+        if not self.initialized:
+            raise NotInitializedError()
+
+        out = self.i2c.read(AccelDef.OUT_START, 6)
+        dat = struct.unpack(">hhh", out)
+        dat = [x * self._to_ms for x in dat]
+        return dat
 
 class Gyro:
 
@@ -103,6 +121,8 @@ class Gyro:
 
         self.dlpf = GyroDef.DLPF_92
 
+        self.initialized = False
+
     def initialize(self):
         self._to_deg = GyroDef.FS_TO_DEG.value[self.scale.value]
         gyro_config = GyroDef.FCHOICE_B_DLPF_EN.value | self.scale.value
@@ -112,10 +132,14 @@ class Gyro:
         dlpf |= self.dlpf.value
         self.i2c[ImuDef.CONFIG_ADDR] = dlpf
 
+        self.initialized = True
+
     def read_deg(self):
-        xout = self.i2c.read(GyroDef.XOUT_START, 6)
-        dat = struct.unpack(">hhh", xout)
-        print(dat)
+        if not self.initialized:
+            raise NotInitializedError()
+
+        out = self.i2c.read(GyroDef.OUT_START, 6)
+        dat = struct.unpack(">hhh", out)
         dat = [x * self._to_deg for x in dat]
         return dat
 
