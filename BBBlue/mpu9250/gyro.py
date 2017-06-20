@@ -1,5 +1,6 @@
 import struct
 
+from enum import Enum
 
 from ..common import NotInitializedError
 

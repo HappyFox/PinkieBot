@@ -1,10 +1,11 @@
 import struct
 
+from enum import IntFlag
 
 from ..common import NotInitializedError
 
 
-class AccelDef(Enum):
+class AccelDef(IntFlag):
     """ From Register map, p14"""
 
     CONFIG_ADDR = 28
@@ -15,11 +16,6 @@ class AccelDef(Enum):
     FS_8G = 0b10 << 3
     FS_16G = 0b11 << 3
 
-    FS_TO_MS = {}
-    FS_TO_MS[FS_2G] = 9.80665 * 2.0 / 32768.0
-    FS_TO_MS[FS_4G] = 9.80665 * 4.0 / 32768.0
-    FS_TO_MS[FS_8G] = 9.80665 * 8.0 / 32768.0
-    FS_TO_MS[FS_16G] = 9.80665 * 16.0 / 32768.0
 
     DLPF_OFF = 7
     DLPF_184 = 1
@@ -41,6 +37,12 @@ class AccelDef(Enum):
 
 class Accelerometer:
 
+    FS_TO_MS = {}
+    FS_TO_MS[AccelDef.FS_2G] = 9.80665 * 2.0 / 32768.0
+    FS_TO_MS[AccelDef.FS_4G] = 9.80665 * 4.0 / 32768.0
+    FS_TO_MS[AccelDef.FS_8G] = 9.80665 * 8.0 / 32768.0
+    FS_TO_MS[AccelDef.FS_16G] = 9.80665 * 16.0 / 32768.0
+
     def __init__(self, i2c_dev):
         self.i2c = i2c_dev
 
@@ -52,11 +54,12 @@ class Accelerometer:
         self.initialized = False
 
     def initialize(self):
-        self._to_ms = AccelDef.FS_TO_MS.value[self.scale.value]
+        import pdb;pdb.set_trace()
+        self._to_ms = self.FS_TO_MS[self.scale]
         self.i2c[AccelDef.CONFIG_ADDR] = self.scale
 
-        dlpf = AccelDef.FCHOICE_1KHZ.value | AccelDef.BIT_FIFO_SIZE_1024.value
-        dlpf |= self.dlpf.value
+        dlpf = AccelDef.FCHOICE_1KHZ | AccelDef.BIT_FIFO_SIZE_1024
+        dlpf |= self.dlpf
         self.i2c[AccelDef.CONFIG_2_ADDR] = dlpf
 
         self.initialized = True
