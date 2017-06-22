@@ -9,6 +9,7 @@ from ..common import BBBlueError, NotInitializedError
 
 from .accelerometer import Accelerometer
 from .gyro import Gyro
+from .magnetometer import Magnetometer, MAG_ADDR
 
 IMU_ADDR = 0x68
 IMU_BUS = 2
@@ -25,7 +26,7 @@ def msleep(msec):
 def build_imu(mag=True, sleep = msleep):
     bus = i2c.I2cBus(IMU_BUS)
 
-    mpu = mpu9250(bus[IMU_ADDR], sleep)
+    mpu = MPU9250(bus[IMU_ADDR], sleep)
 
     if mag:
         mag = Magnetometer(bus[MAG_ADDR], sleep)
@@ -34,14 +35,12 @@ def build_imu(mag=True, sleep = msleep):
     return mpu
 
 
-
 class ImuDef(IntFlag):
 
     PWR_MGMT_1_ADDR = 107
     H_RESET = 0x01 << 7
 
     USER_CTRL_ADDR = 0xA6
-    I2C_MST_EN = 1<<5
 
     ORIENTATION_Z_UP = 136
     ORIENTATION_Z_DOWN = 396
@@ -64,18 +63,34 @@ class ImuDef(IntFlag):
     FIFO_MODE_REPLACE_OLD = 0x00
 
 
+class USER_CTRL(IntFlag):
+    ADDR = 0xA6
+    I2C_MST_EN = 1<<5
+
+
+class INT_PIN(IntFlag):
+    ADDR = 0x37
+
+    ACTL_ACTIVE_LOW = 0x01<<7
+    OPEN_DRAIN = 0x01<<6
+    LATCH_INT_EN = 0x01<<5
+    INT_ANYRD_CLEAR = 0x01<<4
+    ACTL_FSYNC_ACTIVE_LOW = 0x01<<3
+    FSYNC_INT_MODE_EN = 0x01<<2
+    BYPASS_EN = 0x01<<1
+
+
 class MPU9250:
 
-    def __init__(self, i2c_bus, sleep=msleep):
-        self.i2c = i2c_bus[IMU_ADDR]
+    def __init__(self, i2c_dev, sleep=msleep):
+        self.i2c = i2c_dev
         self.sleep = sleep
-
 
         self.dmp_sample_rate = 100
         self.imu_orient = ImuDef.ORIENTATION_Z_UP
 
-        self.accel = Accelerometer(self.i2c, sleep)
-        self.gyro = Gyro(self.i2c, sleep)
+        self.accel = Accelerometer(self.i2c)
+        self.gyro = Gyro(self.i2c)
         self.mag = None
 
     def reset(self):
@@ -101,21 +116,28 @@ class MPU9250:
 
         self.i2c[ImuDef.SMPLRT_DIV] = 0
 
-    @property
-    def bypass(self):
-        user_reg = self.i2c[ImuDef.USER_CTRL_ADDR]
+    def bypass(self, bypass):
+        user_reg = self.i2c[USER_CTRL.ADDR]
 
-        return bool(user_reg & ImuDef.I2C_MST_EN)
-
-    @bypass.setter
-    def bypass(self, value):
-        user_reg = self.i2c[ImuDef.USER_CTRL_ADDR]
-
-        if value:
-            user_reg = user_reg | ImuDef.I2C_MST_EN
+        if bypass:
+            user_reg = user_reg | USER_CTRL.I2C_MST_EN
         else:
-            mask = 255 - ImuDef.I2C_MST_EN
+            mask = 255 - USER_CTRL.I2C_MST_EN
             user_reg = user_reg & mask
 
-        self.i2c[ImuDef.USER_CTRL_ADDR] = user_reg
+        self.i2c[USER_CTRL.ADDR] = user_reg
+
+        self.sleep(3)
+
+        int_pin = INT_PIN.LATCH_INT_EN
+        int_pin |= INT_PIN.INT_ANYRD_CLEAR
+        int_pin |= INT_PIN.ACTL_ACTIVE_LOW
+
+        if bypass:
+            int_pin |= INT_PIN.BYPASS_EN
+
+        self.i2c[INT_PIN.ADDR] = int_pin
+
+
+
 
