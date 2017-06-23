@@ -11,10 +11,9 @@ class MagAddr(IntFlag):
     ADDR = 0x0C
     AK8963 = 0x00   # should return 0x48
     INFO = 0x01
-    ST1 = 0x02      # data ready status
 
     OUT_START = 0x03
-    OUT_LEN = 0x06
+    OUT_LEN = 0x07
     XOUT_L = 0x03   # data
     XOUT_H = 0x04
     YOUT_L = 0x05
@@ -22,7 +21,6 @@ class MagAddr(IntFlag):
     ZOUT_L = 0x07
     ZOUT_H = 0x08
     ST2 = 0x09
-    CNTL = 0x0A     # main mode control register
     ASTC = 0x0C     # Self test control
     I2CDIS = 0x0F   # I2C disable
     SENSE_START = 0x10
@@ -33,6 +31,7 @@ class MagAddr(IntFlag):
 
 
 class CNTL(IntFlag):
+    ADDR = 0x0A
 
     POWER_DN = 0x00     # power down magnetometer
     SINGLE_MES = 0x01   # powers down after 1 measurement
@@ -46,15 +45,16 @@ class CNTL(IntFlag):
 
 
 class ST1(IntFlag):
-
+    ADDR = 0x02
     DATA_READY = 0x01
+
+class ST2(IntFlag):
+    ADDR = 0x09
+
+    HOFL = 1<<3
 
 
 class Magnetometer:
-
-    _X = 0
-    _Y = 1
-    _Z = 2
 
     def __init__(self, i2c_dev, ms_sleep):
         self.i2c = i2c_dev
@@ -63,9 +63,9 @@ class Magnetometer:
         self.last_result = [0,0,0]
 
     def initialize(self):
-        self.i2c[MagAddr.CNTL] = CNTL.POWER_DN
+        self.i2c[CNTL.ADDR] = CNTL.POWER_DN
         self.ms_sleep(1)
-        self.i2c[MagAddr.CNTL] = CNTL.FUSE_ROM
+        self.i2c[CNTL.ADDR] = CNTL.FUSE_ROM
         self.ms_sleep(1)
 
         buff = self.i2c.read(MagAddr.SENSE_START, MagAddr.SENSE_LEN)
@@ -75,15 +75,27 @@ class Magnetometer:
 
         self.adjust = [adj(x) for x in struct.unpack("BBB", buff)]
 
-        self.i2c[MagAddr.CNTL] = CNTL.POWER_DN
+        self.i2c[CNTL.ADDR] = CNTL.POWER_DN
         self.ms_sleep(1)
 
-        self.i2c[MagAddr.CNTL] = CNTL.MSCALE_16 | CNTL.CONT_MES_2
+        self.i2c[CNTL.ADDR] = CNTL.MSCALE_16 | CNTL.CONT_MES_2
 
         # TODO: Add calabration loading
 
     def data_ready(self):
-        return self.i2c[MagAddr.ST1] & ST1.DATA_READY
+        return self.i2c[ST1.ADDR] & ST1.DATA_READY
+
+    def read_data(self):
+        out = self.i2c.read(MagAddr.OUT_START, MagAddr.OUT_LEN)
+        st2 = struct.unpack("B", out[-1:])[0]
+
+        if st2 & ST2.HOFL:
+            pass
+            # TODO: logging ? exception ?
+
+        out = struct.unpack(">hhh", out[:-1])
+
+        return [self.adjust[idx] * out[idx] for idx in range(len(out))]
 
 
 

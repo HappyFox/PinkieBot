@@ -138,6 +138,3 @@ class MPU9250:
 
         self.i2c[INT_PIN.ADDR] = int_pin
 
-
-
-
