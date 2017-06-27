@@ -3,9 +3,11 @@ import time
 
 import i2c
 
+
 from enum import IntFlag
 
 from ..common import BBBlueError, NotInitializedError
+
 
 from .accelerometer import Accelerometer
 from .gyro import Gyro
@@ -117,7 +119,7 @@ class MPU9250:
         self.i2c[ImuDef.SMPLRT_DIV] = 0
 
     def bypass(self, bypass):
-        user_reg = self.i2c[USER_CTRL.ADDR]
+        user_reg = self.i2c[USER_CTRL]
 
         if bypass:
             user_reg = user_reg | USER_CTRL.I2C_MST_EN
@@ -125,7 +127,7 @@ class MPU9250:
             mask = 255 - USER_CTRL.I2C_MST_EN
             user_reg = user_reg & mask
 
-        self.i2c[USER_CTRL.ADDR] = user_reg
+        self.i2c[USER_CTRL] = user_reg
 
         self.sleep(3)
 
@@ -136,5 +138,5 @@ class MPU9250:
         if bypass:
             int_pin |= INT_PIN.BYPASS_EN
 
-        self.i2c[INT_PIN.ADDR] = int_pin
+        self.i2c[INT_PIN] = int_pin
 

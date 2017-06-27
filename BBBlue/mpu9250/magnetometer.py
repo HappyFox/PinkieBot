@@ -3,6 +3,8 @@ import struct
 from enum import IntFlag
 
 
+from i2c import I2cReg
+
 MAG_ADDR = 0x0C
 
 
@@ -44,11 +46,11 @@ class CNTL(IntFlag):
     MSCALE_14 = 0x00
 
 
-class ST1(IntFlag):
+class ST1(I2cReg):
     ADDR = 0x02
     DATA_READY = 0x01
 
-class ST2(IntFlag):
+class ST2(I2cReg):
     ADDR = 0x09
 
     HOFL = 1<<3
@@ -63,9 +65,9 @@ class Magnetometer:
         self.last_result = [0,0,0]
 
     def initialize(self):
-        self.i2c[CNTL.ADDR] = CNTL.POWER_DN
+        self.i2c[CNTL] = CNTL.POWER_DN
         self.ms_sleep(1)
-        self.i2c[CNTL.ADDR] = CNTL.FUSE_ROM
+        self.i2c[CNTL] = CNTL.FUSE_ROM
         self.ms_sleep(1)
 
         buff = self.i2c.read(MagAddr.SENSE_START, MagAddr.SENSE_LEN)
@@ -75,15 +77,15 @@ class Magnetometer:
 
         self.adjust = [adj(x) for x in struct.unpack("BBB", buff)]
 
-        self.i2c[CNTL.ADDR] = CNTL.POWER_DN
+        self.i2c[CNTL] = CNTL.POWER_DN
         self.ms_sleep(1)
 
-        self.i2c[CNTL.ADDR] = CNTL.MSCALE_16 | CNTL.CONT_MES_2
+        self.i2c[CNTL] = CNTL.MSCALE_16 | CNTL.CONT_MES_2
 
         # TODO: Add calabration loading
 
     def data_ready(self):
-        return self.i2c[ST1.ADDR] & ST1.DATA_READY
+        return self.i2c[ST1] & ST1.DATA_READY
 
     def read_data(self):
         out = self.i2c.read(MagAddr.OUT_START, MagAddr.OUT_LEN)

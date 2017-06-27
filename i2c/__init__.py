@@ -2,7 +2,7 @@ import fcntl
 import posix
 import struct
 
-from enum import Enum
+from enum import Enum, IntFlag, EnumMeta
 from fcntl import ioctl
 
 # from i2c-dev.h
@@ -10,6 +10,7 @@ I2C_SLAVE = 0x0703
 
 class NotSupportedError(Exception):
     pass
+
 
 class I2cBus(dict):
 
@@ -57,7 +58,9 @@ class I2cDevice(object):
         self.write(key, buf)
 
     def read(self, addr, _len):
-        if isinstance(addr, Enum):
+        if isinstance(addr, EnumMeta) and hasattr(addr, "ADDR"):
+            addr = addr.ADDR.value
+        elif isinstance(addr, Enum):
             addr = addr.value
 
         addr = struct.pack('B', addr)
@@ -67,8 +70,8 @@ class I2cDevice(object):
         return posix.read(self.fd, _len)
 
     def write(self, addr, value):
-        if isinstance(addr, Enum):
-            addr = addr.value
+        if isinstance(addr, EnumMeta) and hasattr(addr, "ADDR"):
+            addr = addr.ADDR.value
         if isinstance(value, Enum):
             value = value.value
 
