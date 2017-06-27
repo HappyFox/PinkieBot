@@ -2,7 +2,7 @@ import struct
 
 from enum import IntFlag
 
-from ..common import NotInitializedError
+from BBBlue.common import NotInitializedError
 
 
 class AccelDef(IntFlag):

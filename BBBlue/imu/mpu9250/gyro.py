@@ -2,7 +2,7 @@ import struct
 
 from enum import Enum
 
-from ..common import NotInitializedError
+from BBBlue.common import NotInitializedError
 
 
 class GyroDef(Enum):

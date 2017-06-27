@@ -1,40 +1,23 @@
 import struct
 import time
 
-import i2c
 
 
 from enum import IntFlag
 
-from ..common import BBBlueError, NotInitializedError
+import i2c
 
+from BBBlue.common import BBBlueError, NotInitializedError
 
 from .accelerometer import Accelerometer
 from .gyro import Gyro
-from .magnetometer import Magnetometer, MAG_ADDR
 
-IMU_ADDR = 0x68
-IMU_BUS = 2
+ADDR = 0x68
 
 
 class SampleErrorRate(BBBlueError):
     pass
 
-
-def msleep(msec):
-    time.sleep(msec * 0.001)
-
-
-def build_imu(mag=True, sleep = msleep):
-    bus = i2c.I2cBus(IMU_BUS)
-
-    mpu = MPU9250(bus[IMU_ADDR], sleep)
-
-    if mag:
-        mag = Magnetometer(bus[MAG_ADDR], sleep)
-        mpu.mag = mag
-
-    return mpu
 
 
 class ImuDef(IntFlag):
@@ -82,9 +65,9 @@ class INT_PIN(IntFlag):
     BYPASS_EN = 0x01<<1
 
 
-class MPU9250:
+class Mpu9250:
 
-    def __init__(self, i2c_dev, sleep=msleep):
+    def __init__(self, i2c_dev, sleep):
         self.i2c = i2c_dev
         self.sleep = sleep
 
@@ -93,7 +76,6 @@ class MPU9250:
 
         self.accel = Accelerometer(self.i2c)
         self.gyro = Gyro(self.i2c)
-        self.mag = None
 
     def reset(self):
         self.i2c[ImuDef.PWR_MGMT_1_ADDR] = ImuDef.H_RESET

@@ -3,9 +3,7 @@ import struct
 from enum import IntFlag
 
 
-from i2c import I2cReg
-
-MAG_ADDR = 0x0C
+ADDR = 0x0C
 
 
 class MagAddr(IntFlag):
@@ -46,11 +44,11 @@ class CNTL(IntFlag):
     MSCALE_14 = 0x00
 
 
-class ST1(I2cReg):
+class ST1(IntFlag):
     ADDR = 0x02
     DATA_READY = 0x01
 
-class ST2(I2cReg):
+class ST2(IntFlag):
     ADDR = 0x09
 
     HOFL = 1<<3
