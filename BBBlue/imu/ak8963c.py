@@ -54,7 +54,7 @@ class ST2(IntFlag):
     HOFL = 1<<3
 
 
-class Magnetometer:
+class Ak8963c:
 
     def __init__(self, i2c_dev, ms_sleep):
         self.i2c = i2c_dev
@@ -83,7 +83,7 @@ class Magnetometer:
         # TODO: Add calabration loading
 
     def data_ready(self):
-        return self.i2c[ST1] & ST1.DATA_READY
+        return bool(self.i2c[ST1] & ST1.DATA_READY)
 
     def read_data(self):
         out = self.i2c.read(MagAddr.OUT_START, MagAddr.OUT_LEN)

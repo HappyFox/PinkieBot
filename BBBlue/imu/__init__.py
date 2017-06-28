@@ -6,10 +6,10 @@ import i2c
 #import BBBlue.imu.magnetometer as mag
 
 from BBBlue.imu import mpu9250
-from BBBlue.imu import magnetometer
+from BBBlue.imu import ak8963c
 
 from BBBlue.imu.mpu9250 import Mpu9250
-from BBBlue.imu.magnetometer import Magnetometer
+from BBBlue.imu.ak8963c import Ak8963c
 
 
 IMU_BUS = 2
@@ -24,9 +24,9 @@ def build_imu(sleep = msleep):
 
     mpu = Mpu9250(bus[mpu9250.ADDR], sleep)
 
-    _mag = Magnetometer(bus[mag.ADDR], sleep)
+    mag = Ak8963c(bus[ak8963c.ADDR], sleep)
 
-    imu = Imu(mpu, _mag)
+    imu = Imu(mpu, mag)
 
     return imu
 
