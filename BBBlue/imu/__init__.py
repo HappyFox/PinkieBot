@@ -38,5 +38,9 @@ class Imu:
         self.mag = mag
 
     def initialize(self):
-        pass
+        self.mpu.reset()
+
+        self.mpu.bypass(True)
+        self.mag.reset()
+        self.mpu.bypass(False)
 

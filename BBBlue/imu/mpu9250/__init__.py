@@ -19,6 +19,13 @@ class SampleErrorRate(BBBlueError):
     pass
 
 
+class InvalidIdError(BBBlueError):
+    pass
+
+
+class DmpOverFlowError(BBBlueError):
+    pass
+
 
 class ImuDef(IntFlag):
 
@@ -47,10 +54,46 @@ class ImuDef(IntFlag):
     CONFIG_ADDR = 0x1A
     FIFO_MODE_REPLACE_OLD = 0x00
 
+class FifoDef(IntFlag):
+
+    PRGM_START_H = 0x70
+    BANK_SIZE    = 256
+    BANK_SEL     = 0x6D
+    MEM_R_W      = 0x6F
+
+
+class CONFIG(IntFlag):
+    ADDR = 0x1A
+
+    FIFO_DROP = 0x40
+
+
+class PWR_MGMT_1(IntFlag):
+    ADDR = 0x6B
+
+    H_RESET = 0x80
+    SLEEP = 0x40
+    CYCLE = 0x20
+    GYRO_STANDBY = 0x10
+    PD_PTAT = 0x08
+    CLKSEL_INTERNAL = 0
+    CLKSEL_AUTO = 1
+    CLKSEL_STOP = 7
+
+
+class PWR_MGMT_2(IntFlag):
+    ADDR = 0x6C
+
 
 class USER_CTRL(IntFlag):
     ADDR = 0xA6
-    I2C_MST_EN = 1<<5
+
+    I2C_MST_EN = 0x20
+
+class INT_ENABLE(IntFlag):
+    ADDR = 0x38
+
+    RAW_RDY_EN = 0x01
 
 
 class INT_PIN(IntFlag):
@@ -63,6 +106,7 @@ class INT_PIN(IntFlag):
     ACTL_FSYNC_ACTIVE_LOW = 0x01<<3
     FSYNC_INT_MODE_EN = 0x01<<2
     BYPASS_EN = 0x01<<1
+
 
 
 class Mpu9250:
@@ -79,12 +123,13 @@ class Mpu9250:
 
     def reset(self):
         self.i2c[ImuDef.PWR_MGMT_1_ADDR] = ImuDef.H_RESET
-        self.i2c[ImuDef.PWR_MGMT_1_ADDR] = 0
+
+        self.sleep(100)
 
         who_am_i = self.i2c[ImuDef.WHO_AM_I_ADDR]
 
         if who_am_i != ImuDef.WHO_AM_I.value:
-            raise Exception()  # TODO: add proper exception
+            raise InvalidIdError()
 
     def initialize(self):
         self.reset()
@@ -99,6 +144,21 @@ class Mpu9250:
             raise SampleRateError(err_str)
 
         self.i2c[ImuDef.SMPLRT_DIV] = 0
+
+    def calibrate(self):
+        self.reset()
+
+        self.i2c[PWR_MGMT_1] = PWR_MGMT_1.CLKSEL_AUTO
+        self.i2c[PWR_MGMT_2] = 0  # Clear everythin
+
+        self.sleep(200)
+
+        self.i2c[INT_ENABLE] = 0  # Clear all interupts
+        self.i2c[I
+
+
+
+
 
     def bypass(self, bypass):
         user_reg = self.i2c[USER_CTRL]
@@ -121,4 +181,14 @@ class Mpu9250:
             int_pin |= INT_PIN.BYPASS_EN
 
         self.i2c[INT_PIN] = int_pin
+
+    def mpu_write(self, addr, buff):
+        bank = addr >> 8
+        mem_start = addr && 0xFF
+
+        if (len(buff) + mem_start) > FifoDef.BANK_SIZE:
+            raise DmpOverFlowError()
+
+
+
 

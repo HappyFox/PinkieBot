@@ -41,7 +41,7 @@ class Gyro:
     def __init__(self, i2c_dev):
         self.i2c = i2c_dev
 
-        self.scale = GyroDef.FS_1000_DPS
+        self.scale = GyroDef.FS_250_DPS
         self._to_deg= 0.0
 
         self.dlpf = GyroDef.DLPF_92

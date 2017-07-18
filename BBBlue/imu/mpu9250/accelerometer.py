@@ -54,7 +54,6 @@ class Accelerometer:
         self.initialized = False
 
     def initialize(self):
-        import pdb;pdb.set_trace()
         self._to_ms = self.FS_TO_MS[self.scale]
         self.i2c[AccelDef.CONFIG_ADDR] = self.scale
 

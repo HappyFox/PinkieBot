@@ -6,28 +6,14 @@ from enum import IntFlag
 ADDR = 0x0C
 
 
-class MagAddr(IntFlag):
+class MagDef(IntFlag):
 
-    ADDR = 0x0C
     AK8963 = 0x00   # should return 0x48
-    INFO = 0x01
 
     OUT_START = 0x03
     OUT_LEN = 0x07
-    XOUT_L = 0x03   # data
-    XOUT_H = 0x04
-    YOUT_L = 0x05
-    YOUT_H = 0x06
-    ZOUT_L = 0x07
-    ZOUT_H = 0x08
-    ST2 = 0x09
-    ASTC = 0x0C     # Self test control
-    I2CDIS = 0x0F   # I2C disable
     SENSE_START = 0x10
     SENSE_LEN = 0x03
-    ASAX = 0x10     # x-axis sensitivity adjustment value
-    ASAY = 0x11     # y-axis sensitivity adjustment value
-    ASAZ = 0x12     # z-axis sensitivity adjustment value
 
 
 class CNTL(IntFlag):
@@ -42,6 +28,12 @@ class CNTL(IntFlag):
     FUSE_ROM = 0x0F     # ROM read only mode
     MSCALE_16 = 0x01<<4
     MSCALE_14 = 0x00
+
+
+class CNTL2(IntFlag):
+    ADDR = 0x0B
+
+    SRST = 0x01
 
 
 class ST1(IntFlag):
@@ -63,12 +55,13 @@ class Ak8963c:
         self.last_result = [0,0,0]
 
     def initialize(self):
+        self.reset()
         self.i2c[CNTL] = CNTL.POWER_DN
         self.ms_sleep(1)
         self.i2c[CNTL] = CNTL.FUSE_ROM
         self.ms_sleep(1)
 
-        buff = self.i2c.read(MagAddr.SENSE_START, MagAddr.SENSE_LEN)
+        buff = self.i2c.read(MagDef.SENSE_START, MagDef.SENSE_LEN)
 
         # From the AK8963 datasheet p 32
         adj = lambda x: (x - 128)*0.5/128.0 + 1
@@ -85,8 +78,12 @@ class Ak8963c:
     def data_ready(self):
         return bool(self.i2c[ST1] & ST1.DATA_READY)
 
+    def power_down(self):
+        self.i2c[CNTL] = CNTL.POWER_DN
+        self.ms_sleep(1)
+
     def read_data(self):
-        out = self.i2c.read(MagAddr.OUT_START, MagAddr.OUT_LEN)
+        out = self.i2c.read(MagDef.OUT_START, MagDef.OUT_LEN)
         st2 = struct.unpack("B", out[-1:])[0]
 
         if st2 & ST2.HOFL:
@@ -97,5 +94,6 @@ class Ak8963c:
 
         return [self.adjust[idx] * out[idx] for idx in range(len(out))]
 
-
-
+    def reset(self):
+        self.i2c[CNTL2] = CNTL2.SRST
+        self.ms_sleep(1)
